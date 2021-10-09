@@ -20,7 +20,9 @@ SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 
 parser = argparse.ArgumentParser(description="A tool to export UP transactions in a CSV file")
 parser.add_argument('--end_date', type=str, required=True)
-parser.add_argument('--coh', type=str)
+parser.add_argument('--start_date', type=str)
+parser.add_argument('--cash', type=str)
+parser.add_argument('--payments', type=str)
 args = parser.parse_args()
 
 
@@ -43,10 +45,16 @@ def main():
                 token.write(creds.to_json())
 
         service = build('calendar', 'v3', credentials=creds)
+        if args.start_date:
+            start_raw = datetime.datetime.strptime(args.start_date, '%Y-%m-%d')
+            start = start_raw.isoformat() + 'Z'
+            delta = dtdate - start_raw
+        else:
+            start = datetime.datetime.utcnow().isoformat() + 'Z'
+            delta = delta = dtdate - datetime.datetime.utcnow()
 
-        now = datetime.datetime.utcnow().isoformat() + 'Z'
-        events_result = service.events().list(calendarId='primary', timeMin=now,
-                                            maxResults=150, singleEvents=True,
+        events_result = service.events().list(calendarId='primary', timeMin=start,
+                                            maxResults=200, singleEvents=True,
                                             orderBy='startTime').execute()
         events = events_result.get('items', [])
 
@@ -55,7 +63,6 @@ def main():
         for event in events:
             start = event['start'].get('dateTime', event['start'].get('date'))
             date_start = datetime.datetime.strptime(start, '%Y-%m-%d')
-
             if date_start < dtdate:
                 if 'Income' in event['summary']:
                     value = re.findall('[0-9]+', event['summary'])
@@ -65,14 +72,16 @@ def main():
                     value = re.findall('[0-9]+', event['summary'])
                     due = due + int(value[0])
         
-        
-        delta = dtdate - datetime.datetime.utcnow()
+    
         days = delta.days
 
-
+        if args.cash:
+            income = income + int(args.cash)
+        
+        if args.payments:
+            due = due + int(args.payments)
         cashflow = income - due
-        if args.coh:
-            cashflow = cashflow + int(args.coh)
+        
         daily_spend = round(cashflow / days)
         weekly_spend = round(daily_spend * 7)
         
