@@ -13,13 +13,13 @@ import re
 
 ## TODO: Parse decimal dollar values
 ## TODO: Gracefully handle DUE/INCOME events with no dollar value
+## TODO: Start date
 
 
 SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 
 parser = argparse.ArgumentParser(description="A tool to export UP transactions in a CSV file")
-parser.add_argument('--end_date', type=str)
-parser.add_argument('--start_date', type=str)
+parser.add_argument('--end_date', type=str, required=True)
 parser.add_argument('--coh', type=str)
 args = parser.parse_args()
 
@@ -44,11 +44,7 @@ def main():
 
         service = build('calendar', 'v3', credentials=creds)
 
-        if args.start_date:
-            startdate = datetime.datetime.strptime(args.start_date, '%Y-%m-%d')
-            now = startdate.isoformat() + 'Z'
-        else:
-            now = datetime.datetime.utcnow().isoformat() + 'Z'
+        now = datetime.datetime.utcnow().isoformat() + 'Z'
         events_result = service.events().list(calendarId='primary', timeMin=now,
                                             maxResults=150, singleEvents=True,
                                             orderBy='startTime').execute()
@@ -69,13 +65,14 @@ def main():
                     value = re.findall('[0-9]+', event['summary'])
                     due = due + int(value[0])
         
-        delta = date_start - dtdate
+        
+        delta = dtdate - datetime.datetime.utcnow()
         days = delta.days
+
 
         cashflow = income - due
         if args.coh:
             cashflow = cashflow + int(args.coh)
-        print(days)
         daily_spend = round(cashflow / days)
         weekly_spend = round(daily_spend * 7)
         
