@@ -14,7 +14,7 @@ import re
 ## TODO: Parse decimal dollar values
 ## TODO: Gracefully handle DUE/INCOME events with no dollar value
 ## TODO: Calculate daily spending limit
-## TODO: 
+## TODO: Pass start date through args
 
 
 
