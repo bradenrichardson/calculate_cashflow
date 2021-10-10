@@ -43,7 +43,6 @@ def main():
                 creds = flow.run_local_server(port=0)
             with open('token.json', 'w') as token:
                 token.write(creds.to_json())
-
         service = build('calendar', 'v3', credentials=creds)
         if args.start_date:
             start_raw = datetime.datetime.strptime(args.start_date, '%Y-%m-%d')
@@ -71,20 +70,19 @@ def main():
                 if 'Due' in event['summary']:
                     value = re.findall('[0-9]+', event['summary'])
                     due = due + int(value[0])
-        
-    
         days = delta.days
-
-        if args.cash:
-            income = income + int(args.cash)
-        
         if args.payments:
             due = due + int(args.payments)
         cashflow = income - due
-        
+        if args.cash:
+            cash = args.cash
+            cashflow = cashflow + int(cash)
+            print('Cash: ${}'.format(cash))
+        else:
+            cash = 0
+            print('Cash: $0.0')
         daily_spend = round(cashflow / days)
         weekly_spend = round(daily_spend * 7)
-        
         print('Bills: ${} \nIncome: ${}'.format(due, income))
         print('Spare Cash: ${}'.format(cashflow))
         if cashflow > 0:
@@ -92,10 +90,15 @@ def main():
             print('Weekly Spend: ${}'.format(weekly_spend))
         else:
             print('You\'re fucking broke dude')
-
-
-        
-
+        returnDict = {
+            'cash' : cash,
+            'income' : income,
+            'due' : due,
+            'cashflow' : cashflow,
+            'dailySpend' : daily_spend,
+            'weeklySpend' : weekly_spend
+        }
+        return returnDict
     except error as E:
         print(E)
 
