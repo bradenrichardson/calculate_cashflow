@@ -22,13 +22,14 @@ parser = argparse.ArgumentParser(description="A tool to export UP transactions i
 parser.add_argument('--end_date', type=str, required=True)
 parser.add_argument('--start_date', type=str)
 parser.add_argument('--cash', type=str)
-parser.add_argument('--payments', type=str)
+parser.add_argument('--debt', type=str)
+parser.add_argument('--spending', type=str)
 args = parser.parse_args()
 
 
 def main():
     income = 0
-    due = 0.0
+    bills = 0.0
     try:
         dtdate = datetime.datetime.strptime(args.end_date, '%Y-%m-%d')
         creds = None
@@ -53,7 +54,7 @@ def main():
             delta = delta = dtdate - datetime.datetime.utcnow()
 
         events_result = service.events().list(calendarId='primary', timeMin=start,
-                                            maxResults=200, singleEvents=True,
+                                            maxResults=1500, singleEvents=True,
                                             orderBy='startTime').execute()
         events = events_result.get('items', [])
 
@@ -69,31 +70,58 @@ def main():
 
                 if 'Due' in event['summary']:
                     value = re.findall('[0-9]+', event['summary'])
-                    due = due + int(value[0])
+                    bills = bills + int(value[0])
         days = delta.days
-        if args.payments:
-            due = due + int(args.payments)
-        cashflow = income - due
+        
+        cashflow = income - bills
+
+        print('---EXPENSES---')
+
+        if args.spending:
+            spending = int(args.spending)
+            cashflow = cashflow - spending
+            print('Spending: ${}'.format(spending))
+        else:
+            spending = 0
+            print('Spending: ${}'.format(spending))
+        
+        if args.debt:
+            debt = int(args.debt)
+            cashflow = cashflow - debt
+            print('Debt: ${}'.format(debt))
+        else:
+            debt = 0
+            print('Debt: $0')
+        
+        print('Bills: ${}\n'.format(bills))
+        print('---INCOME---')
+
         if args.cash:
             cash = args.cash
             cashflow = cashflow + int(cash)
             print('Cash: ${}'.format(cash))
         else:
             cash = 0
-            print('Cash: $0.0')
+            print('Cash: $0')
+
+        
+        print('Income : ${}\n'.format(income))
+
+        print('---CASHFLOW---')
+        print('Cashflow: ${}'.format(cashflow))
+
         daily_spend = round(cashflow / days)
         weekly_spend = round(daily_spend * 7)
-        print('Bills: ${} \nIncome: ${}'.format(due, income))
-        print('Spare Cash: ${}'.format(cashflow))
-        if cashflow > 0:
-            print('Daily Spend: ${}'.format(daily_spend))
-            print('Weekly Spend: ${}'.format(weekly_spend))
-        else:
-            print('You\'re fucking broke dude')
+
+        print('Daily Spend: ${}'.format(daily_spend))
+        print('Weekly Spend: ${}\n'.format(weekly_spend))
+
         returnDict = {
             'cash' : cash,
+            'debt' : debt,
+            'spending' : spending,
             'income' : income,
-            'due' : due,
+            'bills' : bills,
             'cashflow' : cashflow,
             'dailySpend' : daily_spend,
             'weeklySpend' : weekly_spend
