@@ -23,6 +23,7 @@ parser.add_argument('--end_date', type=str, required=True)
 parser.add_argument('--start_date', type=str)
 parser.add_argument('--cash', type=str)
 parser.add_argument('--debt', type=str)
+parser.add_argument('--saving', type=str)
 parser.add_argument('--spending', type=str)
 args = parser.parse_args()
 
@@ -61,6 +62,8 @@ def main():
         if not events:
             print('No upcoming events found.')
         for event in events:
+            if 'Income' not in event['summary'] and 'Due' not in event['summary']:
+                continue
             start = event['start'].get('dateTime', event['start'].get('date'))
             date_start = datetime.datetime.strptime(start, '%Y-%m-%d')
             if date_start < dtdate:
@@ -92,6 +95,13 @@ def main():
         else:
             debt = 0
             print('Debt: $0')
+        if args.saving:
+            saving = int(args.saving)
+            cashflow = cashflow - saving
+            print('Saving: ${}'.format(saving))
+        else:
+            saving = 0
+            print('Saving: $0')
         
         print('Bills: ${}\n'.format(bills))
         print('---INCOME---')
@@ -118,6 +128,7 @@ def main():
 
         returnDict = {
             'cash' : cash,
+            'saving' : saving,
             'debt' : debt,
             'spending' : spending,
             'income' : income,
